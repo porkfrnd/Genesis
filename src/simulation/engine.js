@@ -44,6 +44,18 @@ export class GenesisEngine {
     });
   }
 
+  refreshCurrentSnapshot(event) {
+    const previous = this.history.at(-1);
+    const nextEvents = [...(previous?.events ?? []), event].slice(-20);
+    this.history[this.history.length - 1] = createSnapshot({
+      generation: this.generation,
+      population: this.population,
+      environment: this.environment,
+      events: nextEvents,
+      previousPopulation: previous?.population ?? this.population.length,
+    });
+  }
+
   getOrganism(id) {
     const organism = this.population.find((candidate) => candidate.id === Number(id));
     return organism ? copy(organism) : null;
@@ -76,6 +88,9 @@ export class GenesisEngine {
 
   setEnvironment(changes) {
     this.environment = normalizeEnvironment({ ...this.environment, ...changes });
+    const event = { type: 'environment', generation: this.generation, message: `Environment changed: ${this.environment.temperature}°C, food ${Math.round(this.environment.food * 100)}%, predation ${Math.round(this.environment.predation * 100)}%.` };
+    this.events.push(event);
+    this.refreshCurrentSnapshot(event);
     return this.getSnapshot();
   }
 
@@ -87,7 +102,9 @@ export class GenesisEngine {
     const before = copy(organism.genome);
     organism.genome = copy(genome);
     refreshOrganism(organism);
-    this.events.push({ type: 'edit', generation: this.generation, organismId: organism.id, message: `Genome changed for specimen #${organism.id}.`, before, after: organism.genome });
+    const event = { type: 'edit', generation: this.generation, organismId: organism.id, message: `Genome changed for specimen #${organism.id}.`, before, after: organism.genome };
+    this.events.push(event);
+    this.refreshCurrentSnapshot(event);
     return { ok: true, snapshot: this.getSnapshot() };
   }
 
@@ -97,7 +114,9 @@ export class GenesisEngine {
     const result = mutateGenome(organism.genome, mutationRate, this.rng);
     organism.genome = result.genome;
     refreshOrganism(organism);
-    this.events.push({ type: 'mutation', generation: this.generation, organismId: organism.id, count: result.count, message: `${result.count} manual mutation event${result.count === 1 ? '' : 's'} introduced into specimen #${organism.id}.` });
+    const event = { type: 'mutation', generation: this.generation, organismId: organism.id, count: result.count, message: `${result.count} manual mutation event${result.count === 1 ? '' : 's'} introduced into specimen #${organism.id}.` };
+    this.events.push(event);
+    this.refreshCurrentSnapshot(event);
     return { ok: true, events: result.events, snapshot: this.getSnapshot() };
   }
 
@@ -107,7 +126,9 @@ export class GenesisEngine {
     const clone = createOrganism({ id: this.nextOrganismId, genome: source.genome, generation: this.generation, parents: [source.id], position: { x: this.rng.range(0.12, 0.88), y: this.rng.range(0.12, 0.88) }, rng: this.rng });
     this.population.push(clone);
     this.nextOrganismId += 1;
-    this.events.push({ type: 'clone', generation: this.generation, organismId: clone.id, message: `Specimen #${clone.id} cloned from #${source.id}.` });
+    const event = { type: 'clone', generation: this.generation, organismId: clone.id, message: `Specimen #${clone.id} cloned from #${source.id}.` };
+    this.events.push(event);
+    this.refreshCurrentSnapshot(event);
     return { ok: true, snapshot: this.getSnapshot() };
   }
 
@@ -140,9 +161,10 @@ export class GenesisEngine {
   }
 
   static fromSerialized(data) {
-    const engine = new GenesisEngine({ seed: data?.seed, populationSize: 1, maxPopulation: data?.maxPopulation, environment: data?.environment });
-    const validation = validateGenome(data?.population?.[0]?.genome);
-    if (!validation.valid) throw new Error('Saved experiment contains an invalid genome.');
+    if (!data || !Array.isArray(data.population)) throw new Error('Saved experiment is missing population state.');
+    const invalidOrganism = data.population.find((organism) => !validateGenome(organism?.genome).valid);
+    if (invalidOrganism) throw new Error('Saved experiment contains an invalid genome.');
+    const engine = new GenesisEngine({ seed: data.seed, populationSize: 1, maxPopulation: data.maxPopulation, environment: data.environment });
     engine.seed = normalizeSeed(data.seed);
     engine.environment = normalizeEnvironment(data.environment);
     engine.generation = Number.isInteger(data.generation) && data.generation >= 0 ? data.generation : 0;

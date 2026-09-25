@@ -1,0 +1,10 @@
+import { CHALLENGES } from '../data/challenges.js';
+
+export default function ChallengesView({ snapshot, initialSnapshot, progress, onComplete, onNavigateLab }) {
+  return (
+    <div className="view-stack challenges-view">
+      <div className="view-intro"><div><p className="eyebrow">CHALLENGES / APPLY THE MODEL</p><h1>Run an experiment, not a quiz.</h1><p>Each challenge reads the actual dish state. A success badge appears only when the simulation meets the stated criteria.</p></div><span className="progress-stamp">{progress.completedChallenges.length}/{CHALLENGES.length} COMPLETE</span></div>
+      <div className="challenge-grid">{CHALLENGES.map((challenge, index) => { const met = challenge.evaluate(snapshot, initialSnapshot); const complete = progress.completedChallenges.includes(challenge.id); return <article className={`challenge-card ${met ? 'is-met' : ''}`} key={challenge.id}><div className="challenge-number">0{index + 1}</div><div className="challenge-heading"><div><p className="eyebrow">OBJECTIVE</p><h2>{challenge.title}</h2></div><span className={`challenge-status ${met ? 'is-met' : ''}`}>{complete ? 'Complete' : met ? 'Criteria met' : 'In progress'}</span></div><p className="challenge-objective">{challenge.objective}</p><div className="challenge-columns"><div><span className="section-label">CONSTRAINTS</span><ul>{challenge.constraints.map((item) => <li key={item}>{item}</li>)}</ul></div><div><span className="section-label">SUCCESS CRITERIA</span><ul>{challenge.criteria.map((item) => <li key={item}>{item}</li>)}</ul></div></div><p className="challenge-status-line">CURRENT READOUT · {challenge.status(snapshot, initialSnapshot)}</p><div className="challenge-actions"><button className="primary-control" type="button" onClick={() => onNavigateLab('lab')}>Open experiment</button><button className="secondary-control" type="button" disabled={!met || complete} onClick={() => onComplete(challenge.id)}>{complete ? 'Recorded' : 'Record success'}</button></div></article>; })}</div>
+    </div>
+  );
+}

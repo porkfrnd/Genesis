@@ -7,7 +7,7 @@
     "test": "vitest run",
     "dev": "vite",
     "build": "vite build",
-    "lint": "eslint . --no-config-lookup",
+    "lint": "eslint . --config lint.config.js",
     "test:watch": "vitest"
   },
   "keywords": [],

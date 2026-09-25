@@ -1,13 +1,13 @@
 import { ageOrganism } from './organism.js';
 import { canReproduce, reproducePair } from './reproduction.js';
 import { evaluateOrganism } from './selection.js';
-import { createSnapshot } from './history.js';
+import { appendHistory, createSnapshot } from './history.js';
 
 function weightedParent(parents, rng) {
   return rng.weightedPick(parents.map((organism) => ({ value: organism, weight: Math.max(0.02, organism.assessment.fitness) })));
 }
 
-export function advanceGeneration({ population, environment, generation, nextOrganismId, rng, history, previousSnapshot, maxPopulation = 360 }) {
+export function advanceGeneration({ population, environment, generation, nextOrganismId, rng, history, maxPopulation = 360 }) {
   const events = [];
   const assessed = [];
   let mutationCount = 0;
@@ -33,7 +33,7 @@ export function advanceGeneration({ population, environment, generation, nextOrg
   const survivors = assessed.filter(canReproduce).slice(0, maxPopulation);
   if (survivors.length === 0) {
     const snapshot = createSnapshot({ generation: generation + 1, population: [], environment, events: [{ type: 'extinction', generation: generation + 1, message: 'No individuals survived the current pressures.' }], extinct: true, previousPopulation: population.length });
-    history.push(snapshot);
+    appendHistory(history, snapshot);
     return { population: [], generation: generation + 1, events: snapshot.events, snapshot, extinct: true, mutationCount: 0, nextOrganismId };
   }
 
