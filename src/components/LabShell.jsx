@@ -32,6 +32,10 @@ export default function LabShell({ activeView, onNavigate, theme, onToggleTheme,
             </button>
           ))}
         </nav>
+        <details className="mobile-nav-more">
+          <summary>More</summary>
+          <div>{NAV_ITEMS.slice(4).map((item) => <button className="mobile-nav-item" type="button" key={item.id} onClick={() => onNavigate(item.id)}>{item.label}</button>)}</div>
+        </details>
         <div className="rail-actions">
           <span className="model-status"><span className="status-dot" aria-hidden="true" /> Educational model</span>
           <button className="icon-button" type="button" onClick={onToggleTheme} aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}>

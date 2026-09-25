@@ -9,11 +9,13 @@ describe('GenomeEditor', () => {
   it('shows a real before and after phenotype and applies the draft', () => {
     const organism = createOrganism({ id: 4, genome: BASELINE_GENOME, rng: createSeededRandom(4) });
     const onApply = vi.fn(() => ({ ok: true }));
-    render(<GenomeEditor organism={organism} onApply={onApply} onMutate={() => {}} onClone={() => {}} />);
+    const draftGenome = { ...BASELINE_GENOME, speed: ['S', 'S'] };
+    render(<GenomeEditor organism={organism} draftGenome={draftGenome} onApply={onApply} onCancel={() => {}} onMutate={() => ({ ok: true })} onClone={() => ({ ok: true })} />);
     expect(screen.getByText('Speed')).toBeVisible();
-    expect(screen.getAllByText('34')).toHaveLength(2);
-    fireEvent.click(screen.getByRole('button', { name: 'Apply genome change' }));
-    expect(onApply).toHaveBeenCalledWith(BASELINE_GENOME);
+    expect(screen.getByText('34')).toBeVisible();
+    expect(screen.getByText('78')).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Apply this change' }));
+    expect(onApply).toHaveBeenCalledWith(draftGenome);
     expect(screen.getByRole('status')).toHaveTextContent('Genome change applied');
   });
 });

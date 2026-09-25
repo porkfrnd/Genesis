@@ -187,11 +187,7 @@ export default function PetriDish({ snapshot, selectedId, onSelect, onReset }) {
           <p className="eyebrow">LIVE FIELD / SELECTED VIEW</p>
           <h2>Petri dish</h2>
         </div>
-        <div className="dish-readout">
-          <span className="readout-key">N</span>
-          <strong>{snapshot.population.length}</strong>
-          <span>specimens</span>
-        </div>
+        <div className="dish-readout"><span><span className="readout-key">N</span> {snapshot.population.length}</span><span className="selected-readout"><span className="readout-key">SELECTED</span> #{String(selectedId ?? 1).padStart(3, '0')}</span></div>
       </div>
       <div className="dish-stage">
         <canvas ref={canvasRef} className="petri-canvas" onClick={handleClick} onKeyDown={handleKeyDown} tabIndex={0} role="img" aria-describedby="dish-specimen-list" aria-label={`Petri dish showing ${snapshot.population.length} moving organisms. Use arrow keys to select a specimen. Click a specimen to inspect it.`} />

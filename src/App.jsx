@@ -12,6 +12,7 @@ import ResearchLog from './components/ResearchLog.jsx';
 import CoursesView from './components/CoursesView.jsx';
 import ChallengesView from './components/ChallengesView.jsx';
 import SandboxView from './components/SandboxView.jsx';
+import ExperimentGuide from './components/ExperimentGuide.jsx';
 import { GenesisEngine } from './simulation/engine.js';
 import { loadExperiments, loadProgress, loadSettings, saveExperiment, saveSettings, deleteExperiment, completeChallenge, toggleLesson } from './storage/storage.js';
 
@@ -32,9 +33,17 @@ export default function App() {
   const [progress, setProgress] = useState(() => loadProgress());
   const [experiments, setExperiments] = useState(() => loadExperiments());
   const [toast, setToast] = useState('');
+  const [guideOpen, setGuideOpen] = useState(true);
+  const [editorOpened, setEditorOpened] = useState(false);
+  const [hasEdited, setHasEdited] = useState(false);
+  const [hasPressure, setHasPressure] = useState(false);
+  const [hasRun, setHasRun] = useState(false);
+  const [draft, setDraft] = useState(null);
 
   const selectedOrganism = useMemo(() => snapshot.population.find((organism) => organism.id === selectedId) ?? snapshot.population[0] ?? null, [snapshot.population, selectedId]);
   const initialSnapshot = snapshot.history[0] ?? snapshot.stats;
+  const guideStep = !editorOpened ? 0 : !hasEdited ? 1 : !hasPressure ? 2 : !hasRun ? 3 : 4;
+  const draftGenome = draft?.id === selectedOrganism?.id ? draft.genome : selectedOrganism?.genome ?? null;
 
   const sync = useCallback((nextSnapshot) => {
     const next = nextSnapshot ?? engine.getSnapshot();
@@ -46,6 +55,11 @@ export default function App() {
   const notify = useCallback((message) => {
     setToast(makeToastMessage(message));
     window.setTimeout(() => setToast(''), 2600);
+  }, []);
+
+  const handleNavigate = useCallback((view) => {
+    if (view === 'genome') setEditorOpened(true);
+    setActiveView(view);
   }, []);
 
   useEffect(() => {
@@ -66,6 +80,7 @@ export default function App() {
 
   const handleStep = (count) => {
     const next = engine.step(count);
+    if (next.generation > snapshot.generation) setHasRun(true);
     sync(next);
   };
 
@@ -74,6 +89,11 @@ export default function App() {
     const next = engine.reset(Number.isFinite(seed) ? seed : snapshot.seed);
     setSeedInput(next.seed.toString());
     setRunning(false);
+    setEditorOpened(false);
+    setHasEdited(false);
+    setHasPressure(false);
+    setHasRun(false);
+    setDraft(null);
     setSelectedId(next.population[0]?.id ?? 1);
     sync(next);
     notify('New dish initialized from the selected seed.');
@@ -81,28 +101,49 @@ export default function App() {
 
   const handleEnvironment = (changes) => {
     const next = engine.setEnvironment(changes);
+    setHasPressure(true);
     sync(next);
   };
 
+  const handleQuickCold = () => handleEnvironment({ temperature: -10, food: 0.72, predation: 0.18, name: 'Cold field' });
+
   const handleApply = (genome) => {
     const result = engine.editGenome(selectedId, genome);
-    if (result.ok) sync(result.snapshot);
+    if (result.ok) {
+      setHasEdited(true);
+      setDraft(null);
+      sync(result.snapshot);
+    }
     return result;
   };
 
+  const handleDraftChange = (geneId, index, allele) => {
+    const baseGenome = draft?.id === selectedOrganism?.id ? draft.genome : selectedOrganism?.genome;
+    if (!baseGenome) return;
+    const nextGenome = { ...baseGenome, [geneId]: baseGenome[geneId].map((value, pairIndex) => pairIndex === index ? allele : value) };
+    setDraft({ id: selectedId, genome: nextGenome });
+  };
+
+  const handleCancelDraft = () => setDraft(null);
+
   const handleMutate = () => {
     const result = engine.mutateOrganism(selectedId);
-    if (result.ok) sync(result.snapshot);
-    else notify(result.error);
+    if (result.ok) {
+      setDraft(null);
+      sync(result.snapshot);
+    } else notify(result.error);
+    return result;
   };
 
   const handleClone = () => {
     const result = engine.cloneOrganism(selectedId);
     if (result.ok) {
+      setDraft(null);
       setSelectedId(result.snapshot.population.at(-1)?.id ?? selectedId);
       sync(result.snapshot);
       notify('Specimen cloned. Its inherited genome is now visible in the inspector.');
     } else notify(result.error);
+    return result;
   };
 
   const handleSave = (name) => {
@@ -110,6 +151,7 @@ export default function App() {
     const saved = saveExperiment({ name, state, stats: engine.getSnapshot().stats });
     setExperiments(loadExperiments());
     notify(`Saved ${saved.name}.`);
+    return saved;
   };
 
   const handleLoad = (experiment) => {
@@ -118,6 +160,11 @@ export default function App() {
       setEngine(restored);
       setSeedInput(restored.seed.toString());
       setActiveView('lab');
+      setEditorOpened(false);
+      setHasEdited(false);
+      setHasPressure(false);
+      setHasRun(false);
+      setDraft(null);
       setRunning(false);
       setSelectedId(restored.getSnapshot().population[0]?.id ?? 1);
       sync(restored.getSnapshot());
@@ -144,18 +191,20 @@ export default function App() {
   const renderLab = () => (
     <div className="view-stack">
       <div className="lab-brief"><div><p className="eyebrow">WELCOME TO THE LAB / FIRST EXPERIMENT</p><h1>Change DNA. Watch consequences unfold.</h1><p>Start with a living population, edit one visible trait, then give the environment something to select.</p></div><div className="causal-brief" aria-label="Experiment flow"><span>DNA</span><b>→</b><span>PHENOTYPE</span><b>→</b><span>EVOLUTION</span><b>→</b><span>EXPLANATION</span></div></div>
+      <ExperimentGuide open={guideOpen} onToggle={() => setGuideOpen((current) => !current)} step={guideStep} selectedId={selectedOrganism?.id ?? 1} onNavigate={handleNavigate} onRun={handleStep} onQuickCold={handleQuickCold} onEnvironment={handleEnvironment} />
       <div className="lab-grid">
         <aside className="lab-left"><SimulationControls running={running} onToggle={() => setRunning((current) => !current)} onStep={handleStep} speed={speed} onSpeedChange={setSpeed} seed={seedInput} onSeedChange={setSeedInput} onReset={handleReset} generation={snapshot.generation} population={snapshot.population.length} /><EnvironmentControls environment={snapshot.environment} onChange={handleEnvironment} /><StatsRail stats={snapshot.stats} environment={snapshot.environment} /></aside>
         <section className="lab-center"><PetriDish snapshot={snapshot} selectedId={selectedOrganism?.id} onSelect={setSelectedId} onReset={handleReset} /><ResearchLog events={snapshot.events} /></section>
-        <aside className="lab-right"><GenomeRail organism={selectedOrganism} selectedGene={selectedGene} onSelectGene={setSelectedGene} onChangePair={(geneId, index, allele) => { const genome = { ...selectedOrganism.genome, [geneId]: selectedOrganism.genome[geneId].map((value, pairIndex) => pairIndex === index ? allele : value) }; handleApply(genome); }} /><OrganismInspector organism={selectedOrganism} environment={snapshot.environment} /></aside>
+        <aside className="lab-right"><GenomeRail organism={selectedOrganism} genome={selectedOrganism?.genome} selectedGene={selectedGene} onSelectGene={setSelectedGene} editable={false} onOpenGenome={() => handleNavigate('genome')} /><OrganismInspector organism={selectedOrganism} environment={snapshot.environment} /></aside>
       </div>
     </div>
   );
 
   const renderGenome = () => (
     <div className="view-stack">
-      <div className="view-intro"><div><p className="eyebrow">GENOME / EDIT AND INSPECT</p><h1>Every trait starts with a locus.</h1><p>Edit a valid allele pair and the model immediately recalculates phenotype. Apply the change only when the causal readout makes sense.</p></div><span className="seed-stamp">SEED {snapshot.seed}</span></div>
-      <div className="genome-layout"><GenomeRail organism={selectedOrganism} selectedGene={selectedGene} onSelectGene={setSelectedGene} onChangePair={(geneId, index, allele) => { const genome = { ...selectedOrganism.genome, [geneId]: selectedOrganism.genome[geneId].map((value, pairIndex) => pairIndex === index ? allele : value) }; handleApply(genome); }} /><GenomeEditor key={selectedOrganism ? `${selectedOrganism.id}-${JSON.stringify(selectedOrganism.genome)}` : 'empty'} organism={selectedOrganism} onApply={handleApply} onMutate={handleMutate} onClone={handleClone} /></div>
+      <div className="view-intro"><div><p className="eyebrow">GENOME / EDIT AND INSPECT</p><h1>Change one gene. See what follows.</h1><p>A gene is an instruction-like locus. An allele is one version of that instruction. Choose a version, preview the trait change, then apply it.</p></div><span className="seed-stamp">SEED {snapshot.seed}</span></div>
+      <div className="view-step-banner"><span>DNA EDIT / PREVIEW BEFORE APPLYING</span><button className="text-control" type="button" onClick={() => handleNavigate('lab')}>Back to experiment guide</button></div>
+      <div className="genome-layout"><GenomeRail organism={selectedOrganism} genome={draftGenome} selectedGene={selectedGene} onSelectGene={setSelectedGene} onChangePair={handleDraftChange} editable /><GenomeEditor key={selectedOrganism?.id ?? 'empty'} organism={selectedOrganism} draftGenome={draftGenome} onApply={handleApply} onCancel={handleCancelDraft} onMutate={handleMutate} onClone={handleClone} /></div>
       <OrganismInspector organism={selectedOrganism} environment={snapshot.environment} />
     </div>
   );
@@ -163,13 +212,13 @@ export default function App() {
   let content = renderLab();
   if (activeView === 'genome') content = renderGenome();
   if (activeView === 'evolution') content = <EvolutionView snapshot={snapshot} onSave={handleSave} experiments={experiments} onLoad={handleLoad} onDelete={handleDelete} />;
-  if (activeView === 'courses') content = <CoursesView progress={progress} onToggleLesson={handleToggleLesson} onNavigateLab={setActiveView} />;
-  if (activeView === 'challenges') content = <ChallengesView snapshot={snapshot} initialSnapshot={initialSnapshot} progress={progress} onComplete={handleCompleteChallenge} onNavigateLab={setActiveView} />;
-  if (activeView === 'sandbox') content = <SandboxView onNavigate={setActiveView} onReset={handleReset} />;
+  if (activeView === 'courses') content = <CoursesView progress={progress} onToggleLesson={handleToggleLesson} onNavigateLab={handleNavigate} />;
+  if (activeView === 'challenges') content = <ChallengesView snapshot={snapshot} initialSnapshot={initialSnapshot} progress={progress} onComplete={handleCompleteChallenge} onNavigateLab={handleNavigate} />;
+  if (activeView === 'sandbox') content = <SandboxView onNavigate={handleNavigate} onReset={handleReset} />;
 
   return (
     <>
-      <LabShell activeView={activeView} onNavigate={setActiveView} theme={theme} onToggleTheme={() => setTheme((current) => current === 'dark' ? 'light' : 'dark')}>
+      <LabShell activeView={activeView} onNavigate={handleNavigate} theme={theme} onToggleTheme={() => setTheme((current) => current === 'dark' ? 'light' : 'dark')}>
         {content}
       </LabShell>
       {toast && <div className="toast" role="status" aria-live="polite" aria-atomic="true">{toast}</div>}

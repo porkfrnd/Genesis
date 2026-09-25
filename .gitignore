@@ -7,3 +7,9 @@ coverage/
 .swarm/
 browser-*.png
 vite-qa.log
+src/test/debug_*.py
+src/test/*_v2.py
+src/test/*_v3.py
+src/test/*_visual.py
+src/test/viewport_debug.py
+save-debug.png

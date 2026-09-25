@@ -24,7 +24,7 @@ npm install
 npm run dev
 ```
 
-Open the local Vite URL shown in the terminal. The default experiment starts with a seeded population of 120 organisms at generation 0.
+Open the local Vite URL shown in the terminal. The Lab opens with a guided first experiment: it starts with a seeded population of 120 organisms at generation 0 and specimen `#001` selected. The guide gives one next action at a time; advanced controls remain available when you need them.
 
 The default seed is `482193`. Use the same seed and starting conditions to reproduce a run.
 
@@ -44,11 +44,11 @@ The project uses React JavaScript rather than TypeScript. The simulation core is
 
 A complete demonstration takes less than a minute:
 
-1. Start in **Lab** with a live population and specimen `#001` selected.
-2. Open **Genome** and change the movement-speed locus from its current pair to `S/S`.
-3. Observe the phenotype readout, causal explanation, and visible organism change.
-4. Return to **Lab** and set a new temperature, food level, and predation pressure.
-5. Press **Evolve population**, or use `+50 gen` / `+1000 gen` for a faster run.
+1. Start in **Lab** with the experiment guide and specimen `#001` selected.
+2. Follow the guide to open **Genome** and change the movement-speed locus from its current pair to `S/S`.
+3. Preview the phenotype change, then choose **Apply this change**.
+4. Return to **Lab** and follow the guide to try a cold environment or adjust a pressure yourself.
+5. Choose **Run 10 generations** first; open **More run controls** when you want a faster batch.
 6. Pause and open **Evolution**.
 7. Compare the actual initial and evolved measurements.
 8. Read the generated explanation and research log.
@@ -77,12 +77,13 @@ The primary experiment workspace contains:
 The genome workspace provides:
 
 - Five simplified loci: speed, size, pigmentation, metabolism, and cold tolerance
-- Valid allele pair editing
+- Valid allele pair editing with a staged preview
+- Apply or cancel before changing the live organism
 - Dominant/recessive expression readout
 - Before/after phenotype values
 - Predicted model effects and trade-offs
 - Causal explanation from allele to phenotype
-- Manual mutation and organism cloning
+- Manual mutation and organism cloning under advanced actions
 
 ### Evolution
 
@@ -212,6 +213,7 @@ src/
 ├── App.jsx                       # React application orchestration
 ├── components/
 │   ├── LabShell.jsx              # Navigation and application frame
+│   ├── ExperimentGuide.jsx        # First-run student experiment path
 │   ├── PetriDish.jsx             # Canvas renderer and selection surface
 │   ├── GenomeRail.jsx            # Locus map and allele controls
 │   ├── GenomeEditor.jsx          # Causal phenotype editor/readout
@@ -242,7 +244,9 @@ src/
 │   └── random.js                  # Framework-independent PRNG
 └── test/
     ├── setup.js
-    └── browser_qa.py              # Real-browser judge-flow check
+    ├── browser_qa.py              # Real-browser judge-flow check
+    ├── ux_smoke.py                # Guided first-action smoke check
+    └── save_smoke.py              # Save/restore browser check
 ```
 
 The UI consumes engine snapshots. Biological rules stay in `src/simulation`; the React components do not make evolutionary decisions.
@@ -308,7 +312,7 @@ npm run dev -- --host 127.0.0.1 --port 4173
 python3 src/test/browser_qa.py
 ```
 
-The checked-in browser script covers desktop, reduced motion, keyboard selection, genome editing, environmental pressure, evolution analysis, save/restore, course feedback, light theme, and mobile layout.
+The checked-in browser scripts cover the guided first action, desktop, reduced motion, keyboard selection, staged genome editing, environmental pressure, evolution analysis, save/restore, course feedback, light theme, and mobile layout.
 
 ## Educational limitations
 
