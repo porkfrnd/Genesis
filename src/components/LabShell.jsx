@@ -15,7 +15,7 @@ export default function LabShell({ activeView, onNavigate, theme, onToggleTheme,
           <div className="brand-mark" aria-hidden="true">G</div>
           <div>
             <p className="brand-name">GENESIS</p>
-            <p className="brand-subtitle">Genetics & evolution laboratory</p>
+            <p className="brand-subtitle">Genetics &amp; evolution laboratory</p>
           </div>
         </div>
         <nav className="primary-nav" aria-label="Primary laboratory areas">
