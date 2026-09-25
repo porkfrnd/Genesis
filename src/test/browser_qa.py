@@ -33,6 +33,11 @@ with sync_playwright() as p:
     assert page.get_by_role('heading', name='What changed, and why?').is_visible()
     assert page.locator('svg[role="img"]').count() >= 2
     page.screenshot(path='browser-evolution-desktop.png', full_page=True)
+    page.get_by_label('Name this run').fill('Cold archive')
+    page.get_by_role('button', name='Save current state').click()
+    assert page.get_by_text('Cold archive', exact=True).is_visible()
+    page.get_by_role('button', name='Restore').click()
+    assert page.locator('button.nav-item', has_text='Lab').get_attribute('aria-current') == 'page'
 
     page.locator('button.nav-item', has_text='Courses').click()
     assert page.get_by_role('heading', name='Explain what you just watched.').is_visible()
