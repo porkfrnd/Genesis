@@ -1,0 +1,44 @@
+:root {
+  font-family: 'IBM Plex Sans Variable', sans-serif;
+  color: #edf3ef;
+  background: #111a18;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+.boot-shell {
+  min-height: 100vh;
+  display: grid;
+  align-content: center;
+  padding: clamp(2rem, 6vw, 6rem);
+}
+
+.boot-shell h1 {
+  max-width: 12ch;
+  margin: 0.4rem 0;
+  font-size: clamp(2.5rem, 7vw, 6rem);
+  font-weight: 540;
+  letter-spacing: -0.05em;
+}
+
+.eyebrow {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+}
