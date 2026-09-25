@@ -246,7 +246,8 @@ src/
     ├── setup.js
     ├── browser_qa.py              # Real-browser judge-flow check
     ├── ux_smoke.py                # Guided first-action smoke check
-    └── save_smoke.py              # Save/restore browser check
+    ├── save_smoke.py              # Save/restore browser check
+    └── extinction_smoke.py        # Empty-population regression check
 ```
 
 The UI consumes engine snapshots. Biological rules stay in `src/simulation`; the React components do not make evolutionary decisions.
@@ -312,7 +313,7 @@ npm run dev -- --host 127.0.0.1 --port 4173
 python3 src/test/browser_qa.py
 ```
 
-The checked-in browser scripts cover the guided first action, desktop, reduced motion, keyboard selection, staged genome editing, environmental pressure, evolution analysis, save/restore, course feedback, light theme, and mobile layout.
+The checked-in browser scripts cover the guided first action, desktop, reduced motion, keyboard selection, staged genome editing, environmental pressure, evolution analysis, save/restore, extinction/restart, course feedback, light theme, and mobile layout.
 
 ## Educational limitations
 

@@ -43,7 +43,7 @@ export default function App() {
   const selectedOrganism = useMemo(() => snapshot.population.find((organism) => organism.id === selectedId) ?? snapshot.population[0] ?? null, [snapshot.population, selectedId]);
   const initialSnapshot = snapshot.history[0] ?? snapshot.stats;
   const guideStep = !editorOpened ? 0 : !hasEdited ? 1 : !hasPressure ? 2 : !hasRun ? 3 : 4;
-  const draftGenome = draft?.id === selectedOrganism?.id ? draft.genome : selectedOrganism?.genome ?? null;
+  const draftGenome = draft && selectedOrganism && draft.id === selectedOrganism.id ? draft.genome : selectedOrganism?.genome ?? null;
 
   const sync = useCallback((nextSnapshot) => {
     const next = nextSnapshot ?? engine.getSnapshot();

@@ -13,3 +13,4 @@ src/test/*_v3.py
 src/test/*_visual.py
 src/test/viewport_debug.py
 save-debug.png
+extinction-debug.png
