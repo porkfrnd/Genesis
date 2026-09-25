@@ -5,3 +5,5 @@ coverage/
 *.local
 .DS_Store
 .swarm/
+browser-*.png
+vite-qa.log

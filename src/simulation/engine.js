@@ -13,7 +13,7 @@ const DEFAULT_CONFIG = Object.freeze({
 });
 
 function copy(value) {
-  return JSON.parse(JSON.stringify(value));
+  return typeof structuredClone === 'function' ? structuredClone(value) : JSON.parse(JSON.stringify(value));
 }
 
 export class GenesisEngine {
@@ -63,7 +63,6 @@ export class GenesisEngine {
 
   step(generations = 1) {
     const requested = Math.max(1, Math.min(1000, Math.floor(generations) || 1));
-    let lastSnapshot = this.history.at(-1);
     for (let index = 0; index < requested; index += 1) {
       if (this.population.length === 0) break;
       const result = advanceGeneration({
@@ -73,15 +72,12 @@ export class GenesisEngine {
         nextOrganismId: this.nextOrganismId,
         rng: this.rng,
         history: this.history,
-        previousSnapshot: lastSnapshot,
         maxPopulation: this.maxPopulation,
       });
       this.population = result.population;
       this.generation = result.generation;
       this.nextOrganismId = result.nextOrganismId;
       this.events.push(...result.events);
-      if (this.events.length > 240) this.events.splice(0, this.events.length - 240);
-      lastSnapshot = result.snapshot;
     }
     return this.getSnapshot();
   }
@@ -108,7 +104,7 @@ export class GenesisEngine {
     return { ok: true, snapshot: this.getSnapshot() };
   }
 
-  mutateOrganism(id, mutationRate = this.environment.mutationRate) {
+  mutateOrganism(id, mutationRate = this.environment.mutationRate ?? DEFAULT_ENVIRONMENT.mutationRate) {
     const organism = this.population.find((candidate) => candidate.id === Number(id));
     if (!organism) return { ok: false, error: 'Specimen not found.' };
     const result = mutateGenome(organism.genome, mutationRate, this.rng);
@@ -123,6 +119,7 @@ export class GenesisEngine {
   cloneOrganism(id) {
     const source = this.population.find((candidate) => candidate.id === Number(id));
     if (!source) return { ok: false, error: 'Specimen not found.' };
+    if (this.population.length >= this.maxPopulation) return { ok: false, error: 'The dish is at its population capacity.' };
     const clone = createOrganism({ id: this.nextOrganismId, genome: source.genome, generation: this.generation, parents: [source.id], position: { x: this.rng.range(0.12, 0.88), y: this.rng.range(0.12, 0.88) }, rng: this.rng });
     this.population.push(clone);
     this.nextOrganismId += 1;
@@ -162,17 +159,23 @@ export class GenesisEngine {
 
   static fromSerialized(data) {
     if (!data || !Array.isArray(data.population)) throw new Error('Saved experiment is missing population state.');
+    if (!Number.isInteger(data.rngState) || data.rngState < 0) throw new Error('Saved experiment is missing its reproducible random state.');
+    if (!Number.isInteger(data.generation) || data.generation < 0) throw new Error('Saved experiment has an invalid generation.');
+    if (!Number.isInteger(data.nextOrganismId) || data.nextOrganismId < 1) throw new Error('Saved experiment has an invalid organism counter.');
+    if (!Array.isArray(data.history) || !Array.isArray(data.events)) throw new Error('Saved experiment is missing its history.');
     const invalidOrganism = data.population.find((organism) => !validateGenome(organism?.genome).valid);
     if (invalidOrganism) throw new Error('Saved experiment contains an invalid genome.');
+    const invalidSnapshot = data.history.find((item) => !Number.isInteger(item?.generation) || !Number.isInteger(item?.population) || !item?.averages);
+    if (invalidSnapshot) throw new Error('Saved experiment contains an invalid history snapshot.');
     const engine = new GenesisEngine({ seed: data.seed, populationSize: 1, maxPopulation: data.maxPopulation, environment: data.environment });
     engine.seed = normalizeSeed(data.seed);
     engine.environment = normalizeEnvironment(data.environment);
-    engine.generation = Number.isInteger(data.generation) && data.generation >= 0 ? data.generation : 0;
-    engine.nextOrganismId = Number.isInteger(data.nextOrganismId) ? data.nextOrganismId : engine.population.length + 1;
+    engine.generation = data.generation;
+    engine.nextOrganismId = data.nextOrganismId;
     engine.population = copy(data.population);
-    engine.history = Array.isArray(data.history) && data.history.length ? copy(data.history) : engine.history;
-    engine.events = Array.isArray(data.events) ? copy(data.events) : [];
-    engine.rng.setState(data.rngState ?? engine.seed);
+    engine.history = data.history.length ? copy(data.history) : [createSnapshot({ generation: engine.generation, population: engine.population, environment: engine.environment, events: [] })];
+    engine.events = copy(data.events);
+    engine.rng.setState(data.rngState);
     return engine;
   }
 }

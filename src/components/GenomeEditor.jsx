@@ -7,8 +7,8 @@ function DeltaRow({ item }) {
 }
 
 export default function GenomeEditor({ organism, onApply, onMutate, onClone }) {
-  const [draftGenome] = useState(organism?.genome ?? null);
   const [message, setMessage] = useState('');
+  const draftGenome = useMemo(() => organism?.genome ?? null, [organism?.genome]);
   const draftPhenotype = useMemo(() => draftGenome ? calculatePhenotype(draftGenome) : null, [draftGenome]);
   const basePhenotype = organism?.phenotype;
   const deltas = draftPhenotype && basePhenotype ? phenotypeDelta(basePhenotype, draftPhenotype) : [];

@@ -42,7 +42,6 @@ export function createSnapshot({ generation, population, environment, events = [
 
 export function appendHistory(history, snapshot) {
   history.push(snapshot);
-  if (history.length > 1201) history.splice(1, history.length - 1201);
   return snapshot;
 }
 

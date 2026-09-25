@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createDefaultEngine } from './engine.js';
+import { GenesisEngine, createDefaultEngine } from './engine.js';
 
 describe('evolution engine', () => {
   it('replays identical state for identical seeds', () => {
@@ -18,6 +18,24 @@ describe('evolution engine', () => {
     expect(snapshot.population.length).toBeGreaterThan(0);
     expect(snapshot.population.length).toBeLessThanOrEqual(engine.maxPopulation);
     expect(snapshot.history).toHaveLength(13);
+  });
+
+  it('restores the exact continuation from serialized state', () => {
+    const uninterrupted = createDefaultEngine();
+    uninterrupted.step(4);
+    const restored = GenesisEngine.fromSerialized(JSON.parse(JSON.stringify(uninterrupted.serialize())));
+    uninterrupted.step(2);
+    restored.step(2);
+    expect(restored.getSnapshot()).toEqual(uninterrupted.getSnapshot());
+  });
+
+  it('records explicit extinction under overwhelming pressure', () => {
+    const engine = createDefaultEngine();
+    engine.setEnvironment({ temperature: -20, food: 0, predation: 1, mutationRate: 1 });
+    const snapshot = engine.step(20);
+    expect(snapshot.extinct).toBe(true);
+    expect(snapshot.population).toHaveLength(0);
+    expect(snapshot.events.some((event) => event.type === 'extinction')).toBe(true);
   });
 
   it('handles a zero-food extreme without silent impossible state', () => {

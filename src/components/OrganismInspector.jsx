@@ -9,7 +9,7 @@ function formatPercent(value) {
 export default function OrganismInspector({ organism, environment }) {
   if (!organism) return <section className="inspector-module empty-inspector"><span className="empty-mark">◎</span><strong>No specimen selected</strong><span>Click an organism in the petri dish to inspect its actual state.</span></section>;
   const assessment = evaluateOrganism(organism, environment);
-  const phenotypeKeys = ['speed', 'size', 'pigmentation', 'coldTolerance', 'metabolism', 'predationEscape'];
+  const phenotypeKeys = ['speed', 'size', 'pigmentation', 'coldTolerance', 'metabolism', 'predationEscape', 'lifespan', 'energyCapacity'];
   return (
     <section className="inspector-module" aria-labelledby="inspector-title">
       <div className="inspector-heading"><div><p className="eyebrow">SPECIMEN RECORD / ACTUAL STATE</p><h2 id="inspector-title">Organism #{String(organism.id).padStart(3, '0')}</h2></div><span className={`fitness-badge fitness-${fitnessLabel(assessment.fitness).toLowerCase()}`}>{fitnessLabel(assessment.fitness)} fitness</span></div>

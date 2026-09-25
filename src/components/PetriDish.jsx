@@ -29,7 +29,25 @@ function organismColor(pigmentation) {
   return COLORS.pale;
 }
 
-export default function PetriDish({ snapshot, selectedId, onSelect }) {
+function drawOrganismShape(context, radius, pigmentation) {
+  if (pigmentation >= 70) {
+    context.beginPath();
+    context.moveTo(0, -radius * 1.15);
+    context.lineTo(radius * 1.1, radius * 0.9);
+    context.lineTo(-radius * 1.1, radius * 0.9);
+    context.closePath();
+    return;
+  }
+  if (pigmentation >= 50) {
+    context.beginPath();
+    context.rect(-radius * 0.85, -radius * 0.85, radius * 1.7, radius * 1.7);
+    return;
+  }
+  context.beginPath();
+  context.ellipse(0, 0, radius * 1.25, radius * 0.72, 0, 0, Math.PI * 2);
+}
+
+export default function PetriDish({ snapshot, selectedId, onSelect, onReset }) {
   const canvasRef = useRef(null);
   const frameRef = useRef(null);
   const positionsRef = useRef(new Map());
@@ -95,8 +113,7 @@ export default function PetriDish({ snapshot, selectedId, onSelect }) {
         context.fillStyle = color;
         context.strokeStyle = organism.id === selectedId ? COLORS.selected : COLORS.dish;
         context.lineWidth = organism.id === selectedId ? 2.5 : 1;
-        context.beginPath();
-        context.ellipse(0, 0, radius * 1.25, radius * 0.72, 0, 0, Math.PI * 2);
+        drawOrganismShape(context, radius, organism.phenotype.pigmentation);
         context.fill();
         context.stroke();
         if (organism.id === selectedId) {
@@ -119,11 +136,15 @@ export default function PetriDish({ snapshot, selectedId, onSelect }) {
       if (!reducedMotion) frameRef.current = window.requestAnimationFrame(draw);
     };
     resize();
-    draw(performance.now());
-    const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(resize) : null;
+    const firstFrame = window.requestAnimationFrame(() => draw(reducedMotion ? 0 : performance.now()));
+    const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => {
+      resize();
+      draw(reducedMotion ? 0 : performance.now());
+    }) : null;
     observer?.observe(canvas);
     return () => {
       observer?.disconnect();
+      window.cancelAnimationFrame(firstFrame);
       if (frameRef.current) window.cancelAnimationFrame(frameRef.current);
     };
   }, [snapshot, selectedId]);
@@ -144,6 +165,21 @@ export default function PetriDish({ snapshot, selectedId, onSelect }) {
     if (nearest && nearestDistance < 22) onSelect(nearest);
   };
 
+  const handleKeyDown = (event) => {
+    if (!snapshot.population.length) return;
+    const ids = snapshot.population.map((organism) => organism.id);
+    const currentIndex = Math.max(0, ids.indexOf(selectedId));
+    let nextIndex = currentIndex;
+    if (event.key === 'ArrowRight' || event.key === 'ArrowDown') nextIndex = (currentIndex + 1) % ids.length;
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') nextIndex = (currentIndex - 1 + ids.length) % ids.length;
+    if (event.key === 'Home') nextIndex = 0;
+    if (event.key === 'End') nextIndex = ids.length - 1;
+    if (nextIndex !== currentIndex || event.key === 'Home' || event.key === 'End') {
+      event.preventDefault();
+      onSelect(ids[nextIndex]);
+    }
+  };
+
   return (
     <section className="petri-module" aria-label="Virtual petri dish">
       <div className="module-heading">
@@ -158,11 +194,11 @@ export default function PetriDish({ snapshot, selectedId, onSelect }) {
         </div>
       </div>
       <div className="dish-stage">
-        <canvas ref={canvasRef} className="petri-canvas" onClick={handleClick} role="img" aria-label={`Petri dish showing ${snapshot.population.length} moving organisms. Click a specimen to inspect it.`} />
+        <canvas ref={canvasRef} className="petri-canvas" onClick={handleClick} onKeyDown={handleKeyDown} tabIndex={0} role="img" aria-describedby="dish-specimen-list" aria-label={`Petri dish showing ${snapshot.population.length} moving organisms. Use arrow keys to select a specimen. Click a specimen to inspect it.`} />
         <div className="dish-crosshair" aria-hidden="true"><span /><span /></div>
         <div className="dish-corner dish-corner-tl">DISH 01 / LIVE</div>
         <div className="dish-corner dish-corner-br">CLICK A SPECIMEN</div>
-        {!snapshot.population.length && <div className="empty-dish"><span className="empty-mark">Ø</span><strong>Population extinct</strong><span>Restart or change the environment to begin again.</span></div>}
+        {!snapshot.population.length && <div className="empty-dish"><span className="empty-mark">Ø</span><strong>Population extinct</strong><span>Restart or change the environment to begin again.</span>{onReset && <button className="secondary-control" type="button" onClick={onReset}>Restart dish</button>}</div>}
       </div>
       <div className="dish-legend" aria-label="Dish legend">
         <span><i className="legend-swatch legend-swatch-pale" /> Pale</span>
@@ -170,6 +206,10 @@ export default function PetriDish({ snapshot, selectedId, onSelect }) {
         <span><i className="legend-ring" /> Selected</span>
         <span className="legend-note">Size maps to body mass · ring maps to energy</span>
       </div>
+      <details id="dish-specimen-list" className="dish-accessible-summary">
+        <summary>Accessible specimen list · use arrow keys on the dish to select</summary>
+        {snapshot.population.length ? <ul>{snapshot.population.slice(0, 12).map((organism) => <li key={organism.id}><strong>#{organism.id}</strong><span>Speed {organism.phenotype.speed} · size {organism.phenotype.size} · pigment {organism.phenotype.pigmentation} · {organism.phenotype.pigmentation >= 70 ? 'triangle' : organism.phenotype.pigmentation >= 50 ? 'square' : 'oval'}</span></li>)}</ul> : <p>No specimens remain.</p>}
+      </details>
     </section>
   );
 }

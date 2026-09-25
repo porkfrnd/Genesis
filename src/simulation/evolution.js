@@ -1,3 +1,4 @@
+import { GENE_BY_ID } from '../data/genes.js';
 import { ageOrganism } from './organism.js';
 import { canReproduce, reproducePair } from './reproduction.js';
 import { evaluateOrganism } from './selection.js';
@@ -11,6 +12,7 @@ export function advanceGeneration({ population, environment, generation, nextOrg
   const events = [];
   const assessed = [];
   let mutationCount = 0;
+  const mutationGenes = new Set();
   const deathsByPressure = { temperature: 0, food: 0, predation: 0, age: 0, health: 0 };
 
   for (const organism of population) {
@@ -42,7 +44,6 @@ export function advanceGeneration({ population, environment, generation, nextOrg
   const desiredPopulation = Math.round(survivors.length * (0.72 + averageFitness * 0.58));
   const targetPopulation = Math.max(1, Math.min(maxPopulation, carryingCapacity, Math.max(4, desiredPopulation)));
   const nextPopulation = survivors.slice(0, targetPopulation);
-  const mutationEvents = [];
 
   if (nextPopulation.length < targetPopulation && survivors.length > 1) {
     let id = nextOrganismId;
@@ -52,7 +53,7 @@ export function advanceGeneration({ population, environment, generation, nextOrg
       const result = reproducePair({ parentA, parentB, id, generation: generation + 1, mutationRate: environment.mutationRate, rng });
       nextPopulation.push(result.organism);
       mutationCount += result.mutationEvents.length;
-      if (result.mutationEvents.length) mutationEvents.push(...result.mutationEvents);
+      for (const event of result.mutationEvents) mutationGenes.add(event.geneId);
       id += 1;
     }
   }
@@ -64,9 +65,12 @@ export function advanceGeneration({ population, environment, generation, nextOrg
 
   const pressureSummary = Object.entries(deathsByPressure).filter(([, count]) => count > 0).map(([key, count]) => `${key}: ${count}`).join(', ');
   if (pressureSummary) events.push({ type: 'selection', generation: generation + 1, message: `Survival filtering removed ${population.length - survivors.length} specimens (${pressureSummary}).` });
-  if (mutationCount > 0) events.push({ type: 'mutation', generation: generation + 1, count: mutationCount, message: `${mutationCount} mutation event${mutationCount === 1 ? '' : 's'} occurred during reproduction.` });
+  if (mutationCount > 0) {
+    const loci = [...mutationGenes].map((geneId) => GENE_BY_ID[geneId].label).join(', ');
+    events.push({ type: 'mutation', generation: generation + 1, count: mutationCount, message: `${mutationCount} mutation event${mutationCount === 1 ? '' : 's'} occurred during reproduction${loci ? ` at ${loci}` : ''}.` });
+  }
 
   const snapshot = createSnapshot({ generation: generation + 1, population: nextPopulation, environment, events, extinct: false, previousPopulation: population.length });
   history.push(snapshot);
-  return { population: nextPopulation, generation: generation + 1, events, snapshot, extinct: false, mutationCount: mutationCount + mutationEvents.length, nextOrganismId: nextOrganismId + Math.max(0, targetPopulation - survivors.length) };
+  return { population: nextPopulation, generation: generation + 1, events, snapshot, extinct: false, mutationCount, nextOrganismId: nextOrganismId + Math.max(0, targetPopulation - survivors.length) };
 }

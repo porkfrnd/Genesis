@@ -11,10 +11,17 @@ describe('local persistence', () => {
     const engine = createDefaultEngine();
     engine.step(3);
     const snapshot = engine.getSnapshot();
-    const saved = saveExperiment({ name: 'Cold run', state: { ...engine.serialize(), ...snapshot }, stats: snapshot.stats });
+    const saved = saveExperiment({ name: 'Cold run', state: engine.serialize(), stats: snapshot.stats });
     expect(loadExperiments()).toHaveLength(1);
     expect(saved.name).toBe('Cold run');
     expect(loadExperiments()[0].engineState.population).toEqual(snapshot.population);
+  });
+
+  it('rejects malformed stored payloads without crashing', () => {
+    window.localStorage.setItem('genesis.experiments.v1', JSON.stringify({ version: 1, data: { broken: true } }));
+    expect(loadExperiments()).toEqual([]);
+    window.localStorage.setItem('genesis.progress.v1', JSON.stringify({ version: 1, data: { completedLessons: 'not-an-array' } }));
+    expect(loadProgress()).toEqual({ completedLessons: [], completedChallenges: [] });
   });
 
   it('deduplicates progress and tolerates missing storage', () => {

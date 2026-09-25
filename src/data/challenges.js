@@ -21,10 +21,10 @@ export const CHALLENGES = [
     starting: 'Set predation, run 100 generations, and compare the initial and current speed.',
     criteria: ['Average speed rises by at least 8 model points', 'Current population is at least 20'],
     evaluate(snapshot, initialSnapshot) {
-      return snapshot.generation >= 100 && snapshot.stats.averages.speed - initialSnapshot.stats.averages.speed >= 8 && snapshot.population.length >= 20;
+      return snapshot.generation >= 100 && snapshot.stats.averages.speed - initialSnapshot.averages.speed >= 8 && snapshot.population.length >= 20;
     },
     status(snapshot, initialSnapshot) {
-      return `Speed ${initialSnapshot.stats.averages.speed} → ${snapshot.stats.averages.speed}.`;
+      return `Speed ${initialSnapshot.averages.speed} → ${snapshot.stats.averages.speed}.`;
     },
   },
   {

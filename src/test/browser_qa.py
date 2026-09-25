@@ -11,8 +11,12 @@ with sync_playwright() as p:
     page.goto(BASE, wait_until='networkidle')
     page.screenshot(path='browser-lab-desktop.png', full_page=True)
     assert page.get_by_role('heading', name='Change DNA. Watch consequences unfold.').is_visible()
-    assert page.locator('canvas[role="img"]').is_visible()
+    canvas = page.locator('canvas[role="img"]')
+    assert canvas.is_visible()
     assert page.get_by_text('Petri dish', exact=True).is_visible()
+    canvas.focus()
+    page.keyboard.press('ArrowRight')
+    assert page.get_by_role('heading', name='Organism #002').is_visible()
 
     page.locator('button.nav-item', has_text='Genome').click()
     page.get_by_label('Movement speed allele 2').select_option('S')

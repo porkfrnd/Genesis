@@ -13,6 +13,7 @@ export default function SimulationControls({ running, onToggle, onStep, speed, o
         <button className="secondary-control" type="button" onClick={() => onStep(1)} disabled={population === 0}>+1 gen</button>
         <button className="secondary-control" type="button" onClick={() => onStep(50)} disabled={population === 0}>+50 gen</button>
         <button className="secondary-control" type="button" onClick={() => onStep(100)} disabled={population === 0}>+100 gen</button>
+        <button className="secondary-control" type="button" onClick={() => onStep(1000)} disabled={population === 0}>+1000 gen</button>
       </div>
       <div className="speed-row">
         <label htmlFor="simulation-speed">Simulation speed</label>
@@ -26,7 +27,7 @@ export default function SimulationControls({ running, onToggle, onStep, speed, o
       <div className="seed-row">
         <label htmlFor="experiment-seed">Experiment seed</label>
         <div className="seed-input-wrap">
-          <input id="experiment-seed" inputMode="numeric" value={seed} onChange={(event) => onSeedChange(event.target.value)} aria-describedby="seed-help" />
+          <input id="experiment-seed" type="number" min="0" max="4294967295" inputMode="numeric" value={seed} onChange={(event) => onSeedChange(event.target.value)} aria-describedby="seed-help" />
           <button type="button" className="text-control" onClick={onReset}>Reset run</button>
         </div>
         <p id="seed-help" className="field-help">Same seed + same starting conditions = same run.</p>

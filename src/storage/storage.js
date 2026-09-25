@@ -7,13 +7,13 @@ function storageAvailable() {
   return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
 }
 
-function read(key, fallback) {
+function read(key, fallback, validate = () => true) {
   if (!storageAvailable()) return fallback;
   try {
     const raw = window.localStorage.getItem(key);
     if (!raw) return fallback;
     const parsed = JSON.parse(raw);
-    if (!parsed || parsed.version !== VERSION) return fallback;
+    if (!parsed || parsed.version !== VERSION || !validate(parsed.data)) return fallback;
     return parsed.data;
   } catch {
     return fallback;
@@ -31,8 +31,7 @@ function write(key, data) {
 }
 
 export function loadExperiments() {
-  const experiments = read(EXPERIMENTS_KEY, []);
-  return Array.isArray(experiments) ? experiments : [];
+  return read(EXPERIMENTS_KEY, [], (value) => Array.isArray(value) && value.every((item) => item && typeof item.id === 'string' && item.engineState));
 }
 
 export function saveExperiment({ name, state, stats }) {
@@ -62,7 +61,7 @@ export function clearExperiments() {
 }
 
 export function loadProgress() {
-  const progress = read(PROGRESS_KEY, { completedLessons: [], completedChallenges: [] });
+  const progress = read(PROGRESS_KEY, { completedLessons: [], completedChallenges: [] }, (value) => value && Array.isArray(value.completedLessons) && Array.isArray(value.completedChallenges));
   return {
     completedLessons: Array.isArray(progress.completedLessons) ? progress.completedLessons : [],
     completedChallenges: Array.isArray(progress.completedChallenges) ? progress.completedChallenges : [],
@@ -90,7 +89,7 @@ export function completeChallenge(id, progress) {
 }
 
 export function loadSettings() {
-  return read(SETTINGS_KEY, { theme: 'dark', motion: 'system' });
+  return read(SETTINGS_KEY, { theme: 'dark', motion: 'system' }, (value) => value && (value.theme === 'dark' || value.theme === 'light') && (value.motion === 'system' || value.motion === 'reduced'));
 }
 
 export function saveSettings(settings) {

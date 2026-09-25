@@ -54,8 +54,8 @@ export default function App() {
 
   useEffect(() => {
     if (!running || snapshot.extinct) return undefined;
-    const interval = speed === 1 ? 900 : speed === 10 ? 220 : speed === 100 ? 70 : 24;
-    const stepSize = speed === 1 ? 1 : speed === 10 ? 2 : speed === 100 ? 10 : 50;
+    const interval = speed === 1 ? 900 : speed === 10 ? 220 : speed === 100 ? 70 : 50;
+    const stepSize = speed === 1 ? 1 : speed === 10 ? 2 : speed === 100 ? 10 : 5;
     const timer = window.setInterval(() => {
       const next = engine.step(stepSize);
       setSnapshot(next);
@@ -122,8 +122,8 @@ export default function App() {
       setSelectedId(restored.getSnapshot().population[0]?.id ?? 1);
       sync(restored.getSnapshot());
       notify(`Restored ${experiment.name}.`);
-    } catch {
-      notify('This saved experiment could not be restored. Start a clean run instead.');
+    } catch (error) {
+      notify(`${error.message || 'Saved data could not be restored.'} Start a clean run instead.`);
     }
   };
 
@@ -146,7 +146,7 @@ export default function App() {
       <div className="lab-brief"><div><p className="eyebrow">WELCOME TO THE LAB / FIRST EXPERIMENT</p><h1>Change DNA. Watch consequences unfold.</h1><p>Start with a living population, edit one visible trait, then give the environment something to select.</p></div><div className="causal-brief" aria-label="Experiment flow"><span>DNA</span><b>→</b><span>PHENOTYPE</span><b>→</b><span>EVOLUTION</span><b>→</b><span>EXPLANATION</span></div></div>
       <div className="lab-grid">
         <aside className="lab-left"><SimulationControls running={running} onToggle={() => setRunning((current) => !current)} onStep={handleStep} speed={speed} onSpeedChange={setSpeed} seed={seedInput} onSeedChange={setSeedInput} onReset={handleReset} generation={snapshot.generation} population={snapshot.population.length} /><EnvironmentControls environment={snapshot.environment} onChange={handleEnvironment} /><StatsRail stats={snapshot.stats} environment={snapshot.environment} /></aside>
-        <section className="lab-center"><PetriDish snapshot={snapshot} selectedId={selectedOrganism?.id} onSelect={setSelectedId} /><ResearchLog events={snapshot.events} /></section>
+        <section className="lab-center"><PetriDish snapshot={snapshot} selectedId={selectedOrganism?.id} onSelect={setSelectedId} onReset={handleReset} /><ResearchLog events={snapshot.events} /></section>
         <aside className="lab-right"><GenomeRail organism={selectedOrganism} selectedGene={selectedGene} onSelectGene={setSelectedGene} onChangePair={(geneId, index, allele) => { const genome = { ...selectedOrganism.genome, [geneId]: selectedOrganism.genome[geneId].map((value, pairIndex) => pairIndex === index ? allele : value) }; handleApply(genome); }} /><OrganismInspector organism={selectedOrganism} environment={snapshot.environment} /></aside>
       </div>
     </div>
@@ -172,7 +172,7 @@ export default function App() {
       <LabShell activeView={activeView} onNavigate={setActiveView} theme={theme} onToggleTheme={() => setTheme((current) => current === 'dark' ? 'light' : 'dark')}>
         {content}
       </LabShell>
-      {toast && <div className="toast" role="status">{toast}</div>}
+      {toast && <div className="toast" role="status" aria-live="polite" aria-atomic="true">{toast}</div>}
     </>
   );
 }
